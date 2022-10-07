@@ -5,7 +5,6 @@ import type { IIngredient, UnitType } from "~/routes";
 export interface AddIngredientProps {
   onAdd: (ingredient: Omit<IIngredient, "id">) => void;
   editOverrides?: IIngredient;
-  // TODO: pass override default values (for edit)
 }
 
 export const AddIngredient: React.FC<AddIngredientProps> = ({

@@ -11,7 +11,7 @@ export type UnitType = "г" | "шт";
 export interface IIngredient {
   id: number; // TODO: remove after db is migrated
   name: string;
-  price: number; // per 100g
+  price: number;
   weight: number;
   units: UnitType;
 }
