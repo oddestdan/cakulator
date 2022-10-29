@@ -251,9 +251,9 @@ export default function Index() {
               onAdd={() =>
                 setReceipt((prev) => ({
                   ...prev,
-                  [ingredient.name]: {
+                  [ingredient.id]: {
                     ...ingredient,
-                    count: (prev[ingredient.name]?.count || 0) + 1,
+                    count: (prev[ingredient.id]?.count || 0) + 1,
                   },
                 }))
               }
