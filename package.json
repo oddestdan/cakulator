@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "generate:css": "tailwindcss -o ./app/styles/tailwind.css",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
-    "setup": "prisma generate && prisma migrate deploy && prisma db seed",
+    "setup": "prisma migrate deploy && prisma db seed",
     "start": "remix-serve build",
     "start:mocks": "binode --require ./mocks -- @remix-run/serve:remix-serve build",
     "test": "vitest",
@@ -35,14 +35,15 @@
     "@remix-run/serve": "^1.7.2",
     "@remix-run/server-runtime": "^1.7.2",
     "@types/bcryptjs": "^2.4.2",
+    "@types/node": "^18.7.18",
     "bcryptjs": "^2.4.3",
     "isbot": "^3.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tiny-invariant": "^1.3.1",
+    "typescript": "^4.8.3",
     "ts-node": "^10.9.1",
-    "tsconfig-paths": "^4.1.0",
-    "typescript": "^4.8.3"
+    "tsconfig-paths": "^4.1.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^7.5.0",
