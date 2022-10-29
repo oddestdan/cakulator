@@ -1,10 +1,11 @@
 import { Input, Select, Option, Button } from "@material-tailwind/react";
 import { useState } from "react";
-import type { IIngredient, UnitType } from "~/routes";
+import type { Ingredient } from "~/models/ingredient.server";
+import type { UnitType } from "~/routes";
 
 export interface AddIngredientProps {
-  onAdd: (ingredient: Omit<IIngredient, "id">) => void;
-  editOverrides?: IIngredient;
+  onAdd: (ingredient: Omit<Ingredient, "id">) => void;
+  editOverrides?: Ingredient;
 }
 
 export const AddIngredient: React.FC<AddIngredientProps> = ({
@@ -12,7 +13,9 @@ export const AddIngredient: React.FC<AddIngredientProps> = ({
   editOverrides,
 }) => {
   const [name, setName] = useState<string>(editOverrides?.name || "");
-  const [units, setUnits] = useState<UnitType>(editOverrides?.units || "г");
+  const [unit, setUnit] = useState<UnitType>(
+    (editOverrides?.unit as UnitType) || "г"
+  );
   const [weight, setWeight] = useState<number>(editOverrides?.weight || 0);
   const [price, setPrice] = useState<number>(editOverrides?.price || 0);
 
@@ -30,7 +33,7 @@ export const AddIngredient: React.FC<AddIngredientProps> = ({
         <Select
           label="Единица"
           defaultValue="г"
-          onChange={(value) => setUnits(value as UnitType)}
+          onChange={(value) => setUnit(value as UnitType)}
         >
           <Option value="г">г</Option>
           <Option value="шт">шт</Option>
@@ -55,10 +58,8 @@ export const AddIngredient: React.FC<AddIngredientProps> = ({
       <span className="">
         <Button
           color="green"
-          disabled={
-            !name.length || price === 0 || weight === 0 || !units.length
-          }
-          onClick={() => onAdd({ name, units, price, weight })}
+          disabled={!name.length || price === 0 || weight === 0 || !unit.length}
+          onClick={() => onAdd({ name, unit, price, weight })}
         >
           Сохранить
         </Button>

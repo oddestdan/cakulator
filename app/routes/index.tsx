@@ -1,20 +1,22 @@
 import { Button, Input, Option, Select } from "@material-tailwind/react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import * as OutlinedIcons from "@heroicons/react/24/outline";
 import { useEffect } from "react";
-import { Ingredient } from "~/components/Ingredient";
 import { AddIngredient } from "~/components/AddIngredient";
-import { mockIngredients } from "~/components/mock";
+import type { ActionFunction, LoaderFunction } from "@remix-run/server-runtime";
+import { json } from "@remix-run/server-runtime";
+import invariant from "tiny-invariant";
+import type { Ingredient as IIngredient } from "~/models/ingredient.server";
+import {
+  createIngredient,
+  deleteIngredientById,
+  editIngredient,
+} from "~/models/ingredient.server";
+import { getIngredients } from "~/models/ingredient.server";
+import { Ingredient } from "~/components/Ingredient";
+import { Form, useLoaderData, useSubmit } from "@remix-run/react";
 
 export type UnitType = "г" | "шт";
-
-export interface IIngredient {
-  id: number; // TODO: remove after db is migrated
-  name: string;
-  price: number;
-  weight: number;
-  units: UnitType;
-}
 
 export interface ICountableIngredient extends IIngredient {
   count?: number;
@@ -31,20 +33,133 @@ const mapCountedIngredient = ({
   weight: weight * (count || 1),
 });
 
+type LoaderData = {
+  ingredients: IIngredient[];
+};
+
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await request.formData();
+  const method = request.method;
+
+  switch (method) {
+    case "POST": {
+      console.log(">> adding ingredient");
+
+      // Create
+      const name = formData.get("name");
+      const price = Number(formData.get("price"));
+      const unit = formData.get("unit");
+      const weight = Number(formData.get("weight"));
+
+      invariant(typeof name === "string", "name must be a string");
+      invariant(typeof price === "number", "price must be a number");
+      invariant(typeof unit === "string", "unit must be a string");
+      invariant(typeof weight === "number", "weight must be a number");
+
+      console.log({ name, price, unit, weight });
+
+      return await createIngredient({
+        name,
+        price,
+        unit,
+        weight,
+      });
+    }
+    case "PUT": {
+      console.log(">> editing ingredient");
+
+      // Edit
+      const id = formData.get("ingredientId");
+      const name = formData.get("name");
+      const price = Number(formData.get("price"));
+      const unit = formData.get("unit");
+      const weight = Number(formData.get("weight"));
+
+      invariant(typeof id === "string", "id must be a string");
+      invariant(typeof name === "string", "name must be a string");
+      invariant(typeof price === "number", "price must be a number");
+      invariant(typeof unit === "string", "unit must be a string");
+      invariant(typeof weight === "number", "weight must be a number");
+
+      console.log({ id, name, price, unit, weight });
+
+      return await editIngredient({ id, name, price, unit, weight });
+    }
+    case "DELETE": {
+      console.log(">> deleting ingredient");
+
+      // Delete
+      const id = formData.get("ingredientId");
+
+      invariant(typeof id === "string", "ingredientId must be a string");
+
+      console.log({ id });
+      return await deleteIngredientById(id);
+    }
+    default:
+      return null;
+  }
+};
+
+export const loader: LoaderFunction = async ({ request, params }) => {
+  const ingredients = await getIngredients();
+  if (!ingredients) {
+    throw new Response("Not Found", { status: 404 });
+  }
+  return json<LoaderData>({ ingredients });
+};
+
 export default function Index() {
-  const [ingredients, setIngredients] =
-    useState<IIngredient[]>(mockIngredients);
+  const { ingredients } = useLoaderData() as LoaderData;
+  const submit = useSubmit();
+  const formRef = useRef<HTMLFormElement>(null);
+
   const [filteredIngredients, setFilteredIngredients] =
     useState<IIngredient[]>(ingredients);
-  const [receipt, setReceipt] = useState<
-    Record<string | number, ICountableIngredient>
-  >({});
+  const [receipt, setReceipt] = useState<Record<string, ICountableIngredient>>(
+    {}
+  );
   const [isAdding, setIsAdding] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [receiptName, setReceiptName] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [localReceipts, setLocalReceipts] = useState<any[]>([]);
   const [editOverrides, setEditOverrides] = useState<IIngredient | undefined>(
     undefined
+  );
+
+  const addIngredient = useCallback(
+    (ingredient: Omit<IIngredient, "id">) => {
+      const formData = new FormData(formRef.current || undefined);
+      formData.set("name", ingredient.name);
+      formData.set("price", ingredient.price.toString());
+      formData.set("unit", ingredient.unit);
+      formData.set("weight", ingredient.weight.toString());
+      submit(formData, { method: "post" });
+    },
+    [submit]
+  );
+
+  const editIngredient = useCallback(
+    (ingredient: IIngredient) => {
+      const formData = new FormData(formRef.current || undefined);
+      formData.set("ingredientId", ingredient.id);
+      formData.set("name", ingredient.name);
+      formData.set("price", ingredient.price.toString());
+      formData.set("unit", ingredient.unit);
+      formData.set("weight", ingredient.weight.toString());
+      submit(formData, { method: "put" });
+    },
+    [submit]
+  );
+
+  const deleteIngredient = useCallback(
+    (ingredient: IIngredient) => {
+      const formData = new FormData(formRef.current || undefined);
+      formData.set("ingredientId", ingredient.id);
+      submit(formData, { method: "delete" });
+    },
+    [submit]
   );
 
   useEffect(() => {
@@ -130,7 +245,7 @@ export default function Index() {
               </Select>
             </span>
           </div>
-          {Object.entries(receipt).map(([key, ingredient]) => (
+          {Object.entries(receipt).map(([key, ingredient], index) => (
             <Ingredient
               key={ingredient.id}
               onAdd={() =>
@@ -144,16 +259,27 @@ export default function Index() {
               }
               onDelete={() => setReceipt(({ [key]: _, ...rest }) => rest)}
               ingredient={mapCountedIngredient(ingredient)}
+              index={index}
             />
           ))}
         </div>
 
         {/* Ingredients library */}
-        <div className="flex h-1/2 flex-col gap-4 overflow-y-auto border-t-4 border-gray-200 px-4">
+        <Form
+          method="post"
+          className="flex h-1/2 flex-col gap-4 overflow-y-auto border-t-4 border-gray-200 px-4"
+          ref={formRef}
+        >
           <div className="my-4 flex flex-wrap items-center gap-4">
             <span className="flex-1">Ингредиенты:</span>
             <span className="flex flex-1 gap-4">
-              <Button color="green" onClick={() => setIsAdding(true)}>
+              <Button
+                color="green"
+                onClick={() => {
+                  setIsAdding(true);
+                  setIsEditing(false);
+                }}
+              >
                 Добавить
               </Button>
               <Input
@@ -171,45 +297,45 @@ export default function Index() {
           </div>
           {isAdding && (
             <AddIngredient
-              editOverrides={editOverrides}
+              editOverrides={undefined}
               onAdd={(newIngredient) => {
-                setIngredients([
-                  ...ingredients,
-                  { ...newIngredient, id: ingredients.length + 1 },
-                ]);
-                setEditOverrides(undefined);
+                addIngredient(newIngredient);
                 setIsAdding(false);
               }}
             />
           )}
-          {filteredIngredients.map((ingredient) => (
+          {isEditing && (
+            <AddIngredient
+              editOverrides={editOverrides}
+              onAdd={(newIngredient) => {
+                editIngredient({ ...newIngredient, id: editOverrides!.id });
+                setIsEditing(false);
+              }}
+            />
+          )}
+          {filteredIngredients.map((ingredient, index) => (
             <Ingredient
               key={ingredient.id}
               onAdd={() =>
                 setReceipt((prev) => ({
                   ...prev,
-                  [ingredient.name]: {
+                  [ingredient.id]: {
                     ...ingredient,
-                    count: (prev[ingredient.name]?.count || 0) + 1,
+                    count: (prev[ingredient.id]?.count || 0) + 1,
                   },
                 }))
               }
               onEdit={() => {
-                setIsAdding(true);
+                setIsEditing(true);
+                setIsAdding(false);
                 setEditOverrides(ingredient);
-                setIngredients(
-                  ingredients.filter((i) => i.id !== ingredient.id)
-                );
               }}
-              onDelete={() =>
-                setIngredients(
-                  ingredients.filter((i) => i.id !== ingredient.id)
-                )
-              }
+              onDelete={() => deleteIngredient(ingredient)}
               ingredient={ingredient}
+              index={index}
             />
           ))}
-        </div>
+        </Form>
       </div>
     </main>
   );

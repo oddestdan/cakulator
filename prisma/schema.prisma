@@ -23,3 +23,11 @@ model Password {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String @unique
 }
+
+model Ingredient {
+  id      String @id @default(cuid())
+  name    String
+  price   Float
+  weight  Float
+  unit    String
+}
