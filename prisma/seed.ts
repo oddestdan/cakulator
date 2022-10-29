@@ -1,5 +1,4 @@
 import { PrismaClient } from "@prisma/client";
-import { createIngredient } from "~/models/ingredient.server";
 
 const prisma = new PrismaClient();
 
@@ -14,7 +13,7 @@ async function seed() {
     { name: "Разрыхлитель", price: 40, weight: 100, unit: "г" },
     { name: "Сливки 33%", price: 17.2, weight: 100, unit: "г" },
   ].map(async (ingredient) => {
-    return await createIngredient(ingredient);
+    return await prisma.ingredient.create({ data: ingredient });
   });
 
   console.log("Created ingredients:");
